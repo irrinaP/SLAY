@@ -1,0 +1,629 @@
+using System;
+using System.Windows.Forms;
+using System.Diagnostics;
+using System.Drawing;
+using System.Globalization;
+using Excel = Microsoft.Office.Interop.Excel;
+
+namespace slay
+{
+    static class Program
+    {
+        static void Main()
+        {
+            Application.EnableVisualStyles();
+            Application.SetCompatibleTextRenderingDefault(false);
+
+            MainForm mainForm = new MainForm();
+            Application.Run(mainForm);
+        }
+    }
+
+    public partial class MainForm : Form
+    {
+        private DataGridView dataGridViewA;
+        private TextBox matrixATextBox;
+        private Button button;
+        private Button button2;
+        private Button button3;
+        private CheckBox kramerCheckBox;
+        private CheckBox gaussCheckBox;
+        private CheckBox jordanCheckBox;
+        private Button button4;
+        private TextBox resultTextBox;
+        private DataGridView dataGridViewB;
+        private Label label1;
+        private Button button5;
+        private Button button6;
+
+        public MainForm()
+        {
+            InitializeComponent();
+            this.Size = new System.Drawing.Size(1000, 800);
+
+        }
+        private void InitializeComponent()
+        {
+            gaussCheckBox = new CheckBox();
+            jordanCheckBox = new CheckBox();
+            kramerCheckBox = new CheckBox();
+
+            dataGridViewA = new DataGridView();
+            dataGridViewA.Location = new System.Drawing.Point(500, 150);
+            dataGridViewA.Size = new System.Drawing.Size(300, 200);
+            dataGridViewA.TabIndex = 19;
+
+            dataGridViewB = new DataGridView();
+            dataGridViewB.ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.AutoSize;
+            dataGridViewB.Location = new Point(dataGridViewA.Right + 0, 150);
+            dataGridViewB.Name = "dataGridViewB";
+            dataGridViewB.RowHeadersWidth = 51;
+            dataGridViewB.RowTemplate.Height = 24;
+            dataGridViewB.Size = new Size(160, 200);
+            dataGridViewB.TabIndex = 14;
+
+            matrixATextBox = new TextBox();
+            matrixATextBox.Location = new System.Drawing.Point(665, 60);
+            matrixATextBox.Size = new System.Drawing.Size(30, 20);
+            matrixATextBox.TabIndex = 11;
+
+            button4 = new Button();
+            button4.Location = new Point(230, 12);
+            button4.Name = "button4";
+            button4.Size = new Size(200, 23);
+            button4.TabIndex = 12;
+            button4.Text = "calculate";
+            button4.UseVisualStyleBackColor = true;
+            button4.Click += new EventHandler(CalculateButton_Click);
+
+            button = new Button();
+            button.Location = new System.Drawing.Point(700, 100);
+            button.Size = new System.Drawing.Size(164, 23);
+            button.TabIndex = 16;
+            button.Text = "generate";
+            button.UseVisualStyleBackColor = true;
+            button.Click += GenerateDataButton_Click;
+
+            button5 = new Button();
+            button5.Location = new System.Drawing.Point(12, 12);
+            button5.Name = "button5";
+            button5.Size = new System.Drawing.Size(200, 23);
+            button5.TabIndex = 13;
+            button5.Text = "clean";
+            button5.UseVisualStyleBackColor = true;
+            button5.Click += new System.EventHandler(ClearButton_Click);
+
+            button2 = new Button();
+            button2.Location = new System.Drawing.Point(500, 100);
+            button2.Size = new System.Drawing.Size(156, 23);
+            button2.TabIndex = 17;
+            button2.Text = "download from Excel";
+            button2.UseVisualStyleBackColor = true;
+            button2.Click += CombinedButtonClick;
+
+            kramerCheckBox.AutoSize = true;
+            kramerCheckBox.Location = new System.Drawing.Point(800, 12);
+            kramerCheckBox.Size = new System.Drawing.Size(158, 17);
+            kramerCheckBox.TabIndex = 1;
+            kramerCheckBox.Text = "Cramer";
+            kramerCheckBox.UseVisualStyleBackColor = true;
+
+            gaussCheckBox.AutoSize = true;
+            gaussCheckBox.Location = new System.Drawing.Point(450, 12);
+            gaussCheckBox.Size = new System.Drawing.Size(96, 17);
+            gaussCheckBox.TabIndex = 0;
+            gaussCheckBox.Text = "Gauss";
+            gaussCheckBox.UseVisualStyleBackColor = true;
+
+            jordanCheckBox.AutoSize = true;
+            jordanCheckBox.Location = new System.Drawing.Point(625, 12);
+            jordanCheckBox.Size = new System.Drawing.Size(108, 17);
+            jordanCheckBox.TabIndex = 2;
+            jordanCheckBox.Text = "Jordan - Gauss";
+            jordanCheckBox.UseVisualStyleBackColor = true;
+
+            resultTextBox = new TextBox();
+            resultTextBox.AutoSize = false;
+            resultTextBox.Multiline = true;
+            resultTextBox.Location = new System.Drawing.Point(12, 50);
+            resultTextBox.Size = new System.Drawing.Size(400, 300); 
+            resultTextBox.ScrollBars = ScrollBars.Vertical;
+
+            label1 = new Label();
+            label1.AutoSize = true;
+            label1.Location = new System.Drawing.Point(720, 60);
+            label1.Size = new System.Drawing.Size(136, 13);
+            label1.TabIndex = 7;
+            label1.Text = "- size";
+
+            button6 = new Button();
+            button6.Location = new System.Drawing.Point(800, 60);
+            button6.Size = new System.Drawing.Size(156, 23);
+            button6.TabIndex = 17;
+            button6.Text = "apply";
+            button6.UseVisualStyleBackColor = true;
+            button6.Click += ApplyButton_Click;
+
+            this.Controls.Add(dataGridViewA);
+            this.Controls.Add(matrixATextBox);
+            this.Controls.Add(button);
+            this.Controls.Add(button2);
+            this.Controls.Add(button3);
+            this.Controls.Add(kramerCheckBox);
+            this.Controls.Add(gaussCheckBox);
+            this.Controls.Add(jordanCheckBox);
+            this.Controls.Add(button4);
+            this.Controls.Add(resultTextBox);
+            this.Controls.Add(dataGridViewB);
+            this.Controls.Add(label1);
+            this.Controls.Add(button5);
+            this.Controls.Add(button6);
+
+        }
+
+        string[,] list = new string[50, 50];
+
+        private void GenerateDataButton_Click(object sender, EventArgs e)
+        {
+            int n;
+            dataGridViewA.Rows.Clear();
+            dataGridViewA.Columns.Clear();
+            dataGridViewB.Rows.Clear();
+            if (!int.TryParse(matrixATextBox.Text, out n))
+            {
+                throw new ArgumentException("incorrectly");
+            }
+            dataGridViewA.ColumnCount = n;
+            dataGridViewA.RowCount = n;
+            dataGridViewB.RowCount = n;
+            var RandomNumber = new Random((int)Stopwatch.GetTimestamp());
+            for (int i = 0; i < n; i++)
+            {
+                for (int j = 0; j < n; j++)
+                {
+                    double number;
+                    number = RandomNumber.Next(-50, 50) - 10 + 15;
+                    dataGridViewA.Rows[i].Cells[j].Value = i + number * j + number;
+                }
+                dataGridViewA.Columns[i].HeaderCell.Value = $"X{i + 1}";
+            }
+            for (int i = 0; i < n; i++)
+            {
+                double num;
+                num = RandomNumber.Next(-20, 50) - 10 + 15;
+                dataGridViewB.Rows[i].Cells[0].Value = num;
+                dataGridViewB.Columns[0].HeaderCell.Value = "B";
+            }
+        }
+
+        private void ApplyButton_Click(object sender, EventArgs e)
+        {
+            try
+            {
+                int n;
+                if (!int.TryParse(matrixATextBox.Text, out n))
+                {
+                    throw new ArgumentException("Некорректные значения входных данных");
+                }
+
+                dataGridViewA.Rows.Clear();
+                dataGridViewA.Columns.Clear();
+                dataGridViewB.Rows.Clear();
+
+                for (int i = 0; i < n; i++)
+                {
+                    dataGridViewA.Columns.Add($"X{i + 1}", $"X{i + 1}");
+                }
+
+                for (int i = 0; i < n; i++)
+                {
+                    dataGridViewA.Rows.Add();
+                }
+
+                dataGridViewB.Columns.Add("B", "B");
+
+                for (int i = 0; i < n; i++)
+                {
+                    dataGridViewB.Rows.Add();
+                }
+
+                dataGridViewA.AllowUserToAddRows = false;
+                dataGridViewB.AllowUserToAddRows = false;
+
+                dataGridViewA.EditingControlShowing += dataGridViewA_EditingControlShowing;
+
+                resultTextBox.Clear();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Ошибка: " + ex.Message);
+            }
+        }
+
+        private void dataGridViewA_EditingControlShowing(object sender, DataGridViewEditingControlShowingEventArgs e)
+        {
+            TextBox textBox = e.Control as TextBox;
+            if (textBox != null)
+            {
+                textBox.KeyPress -= dataGridViewTextBox_KeyPress; 
+                textBox.KeyPress += dataGridViewTextBox_KeyPress; 
+            }
+        }
+        private void dataGridViewTextBox_KeyPress(object sender, KeyPressEventArgs e)
+        {
+            if (!char.IsControl(e.KeyChar) && !char.IsDigit(e.KeyChar) && e.KeyChar != '.' && e.KeyChar != ',' && e.KeyChar != '-')
+            {
+                e.Handled = true;
+            }
+
+            TextBox textBox = (TextBox)sender;
+            string text = textBox.Text;
+
+            if (e.KeyChar == '-' && text.Contains("-"))
+            {
+                e.Handled = true;
+            }
+
+            if ((e.KeyChar == '.' && text.Contains(".")) || (e.KeyChar == ',' && text.Contains(",")))
+            {
+                e.Handled = true;
+            }
+
+            if (e.KeyChar == ',')
+            {
+                e.KeyChar = '.';
+            }
+        }
+        private int ExportExcel()
+        {
+            OpenFileDialog ofd = new OpenFileDialog();
+            ofd.DefaultExt = "*.xls;*.xlsx";
+            ofd.Filter = "files Excel (Spisok.xlsx)|*.xlsx";
+            ofd.Title = "select";
+
+            if (!(ofd.ShowDialog() == DialogResult.OK))
+                return 0;
+
+            Excel.Application ObjWorkExcel = new Excel.Application();
+            Excel.Workbook ObjWorkBook = ObjWorkExcel.Workbooks.Open(ofd.FileName);
+            Excel.Worksheet ObjWorkSheet = (Excel.Worksheet)ObjWorkBook.Sheets[1];
+            var lastCell = ObjWorkSheet.Cells.SpecialCells(Excel.XlCellType.xlCellTypeLastCell);
+
+            int lastRow = (int)lastCell.Row;
+            int lastColumn = (int)lastCell.Column;
+
+            list = new string[lastRow, lastColumn];
+
+            for (int i = 0; i < lastRow; i++)
+            {
+                for (int j = 0; j < lastColumn; j++)
+                {
+                    if (double.TryParse(ObjWorkSheet.Cells[i + 1, j + 1].Text.ToString(),
+                                        System.Globalization.NumberStyles.Any,
+                                        CultureInfo.InvariantCulture,
+                                        out double cellValue))
+                    {
+                        list[i, j] = cellValue.ToString("G2");
+                    }
+                    else
+                    {
+                        list[i, j] = ObjWorkSheet.Cells[i + 1, j + 1].Text.ToString();
+                    }
+                }
+            }
+
+            ObjWorkBook.Close(false, Type.Missing, Type.Missing);
+            ObjWorkExcel.Quit();
+            GC.Collect();
+            return lastRow;
+        }
+
+        private void button2_Click(object sender, EventArgs e)
+        {
+            int n = ExportExcel();
+            dataGridViewA.Rows.Clear();
+            dataGridViewA.ColumnCount = n;
+            dataGridViewA.RowCount = n;
+            for (int i = 0; i < n; i++) 
+            {
+                for (int j = 0; j < n; j++)
+                {
+                    dataGridViewA.Rows[i].Cells[j].Value = list[i, j];
+                }
+                dataGridViewA.Columns[i].HeaderCell.Value = $"x{i + 1}";
+            }
+
+        }
+        private void button3_Click(object sender, EventArgs e)
+        {
+            int n = ExportExcel();
+            dataGridViewB.Rows.Clear();
+            dataGridViewB.RowCount = n;
+
+            if (n > 0)
+            {
+                int индексПоследнегоСтолбца = list.GetLength(1) - 1;
+
+                for (int i = 0; i < n; i++)
+                {
+                    dataGridViewB.Rows[i].Cells[0].Value = list[i, индексПоследнегоСтолбца];
+                }
+ ;
+            }
+        }
+
+        private void CombinedButtonClick(object sender, EventArgs e)
+        {
+            button2_Click(sender, e);
+            button3_Click(sender, e);
+        }
+
+        public void myGauss(ref double[,] a, ref double[] b, ref double[] x, int n)
+        {
+            for (int k = 0; k < n - 1; k++)
+            {
+                for (int i = k + 1; i < n; i++)
+                {
+                    for (int j = k + 1; j < n; j++)
+                    {
+                        a[i, j] = a[i, j] - a[k, j] * (a[i, k] / a[k, k]);
+                    }
+                    b[i] = b[i] - b[k] * a[i, k] / a[k, k];
+                }
+            }
+
+            double sum = 0;
+
+            for (int k = n - 1; k >= 0; k--)
+            {
+                sum = 0;
+                for (int j = k + 1; j < n; j++)
+                {
+                    sum = sum + a[k, j] * x[j];
+                }
+                x[k] = (b[k] - sum) / a[k, k];
+            }
+        }
+
+        private void CalculateButton_Click(object sender, EventArgs e)
+        {
+            try
+            {
+                int n;
+                if (!int.TryParse(matrixATextBox.Text, out n))
+                {
+                    throw new ArgumentException("incorrectly");
+                }
+
+                if (kramerCheckBox.Checked)
+                {
+                    double[,] A = new double[n, n];
+                    double[] B = new double[n];
+                    double[] X = new double[n];  
+                    for (int i = 0; i < n; i++)
+                    {
+                        for (int j = 0; j < n; j++)
+                        {
+                            A[i, j] = Convert.ToDouble(dataGridViewA[j, i].Value);
+                        }
+                        B[i] = Convert.ToDouble(dataGridViewB[0, i].Value);
+                    }
+                    Stopwatch stopwatch = new Stopwatch();
+                    stopwatch.Start();
+                    myGauss(ref A, ref B, ref X, n);
+                    
+                    stopwatch.Stop();
+                    
+                    long elapsedTicks = stopwatch.ElapsedTicks;
+
+                    long nanoseconds = elapsedTicks ;
+
+                    resultTextBox.AppendText("Cramer " + "\r\n");
+                    resultTextBox.AppendText($"time {nanoseconds:F0} нс\n" + "\r\n");
+                    for (int i = 0; i < n; i++)
+                    {
+                        resultTextBox.AppendText($"x{i + 1} = {X[i].ToString("F2")}\r\n");
+                    }
+                }
+
+                if (gaussCheckBox.Checked)
+                {
+                    double[,] A = new double[n, n];
+                    double[] B = new double[n];
+                    double[] X = new double[n];
+                    for (int i = 0; i < n; i++)
+                    {
+                        for (int j = 0; j < n; j++)
+                        {
+                            A[i, j] = Convert.ToDouble(dataGridViewA[j, i].Value);
+                        }
+                        B[i] = Convert.ToDouble(dataGridViewB[0, i].Value);
+                    }
+                    Stopwatch stopwatch2 = new Stopwatch();
+                    stopwatch2.Start();
+                    X = SolveEquations(A, B);
+                    
+                    stopwatch2.Stop();
+
+                    long elapsedTicks = stopwatch2.ElapsedTicks;
+
+                    long nanoseconds = elapsedTicks ;
+
+                    resultTextBox.AppendText("\r\n\r\n" + "Gauss " + "\r\n");
+                    resultTextBox.AppendText($"time {nanoseconds:F0} нс\n" + "\r\n");
+                    for (int j = 0; j < X.Length; j++)  
+                    {
+                        resultTextBox.AppendText($"x{j + 1} = {X[j].ToString("F2")}\r\n");
+                    }
+                }
+
+                if (jordanCheckBox.Checked)
+                {
+                    double[,] A = new double[n, n];
+                    double[] B = new double[n];
+                    double[] X = new double[n];
+                    for (int i = 0; i < n; i++)
+                    {
+                        for (int j = 0; j < n; j++)
+                        {
+                            A[i, j] = Convert.ToDouble(dataGridViewA[j, i].Value);
+                        }
+                        B[i] = Convert.ToDouble(dataGridViewB[0, i].Value);
+                    }
+                    Stopwatch stopwatch3 = new Stopwatch();
+                    stopwatch3.Start();
+                   
+                    myJordanGauss(ref A, ref B, ref X, n);
+                    stopwatch3.Stop();
+
+                    long elapsedTicks = stopwatch3.ElapsedTicks;
+
+                    long nanoseconds = elapsedTicks ;
+
+                    resultTextBox.AppendText("\r\n\r\n" + "Jordan - Gauss " + "\r\n");
+                    resultTextBox.AppendText($"time {nanoseconds:F0} нс\n" + "\r\n");
+                    for (int i = 0; i < n; i++)
+                    {
+                        resultTextBox.AppendText($"x{i + 1} = {X[i].ToString("F2")}\r\n");
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("error " + ex.Message);
+            }
+        }
+        public double[] SolveEquations(double[,] A, double[] B)
+        {
+            int n = A.GetLength(0);
+            double[] X = new double[n];
+
+            double detA = Determinant(A);
+
+            if (detA == 0)
+            {
+                return null;
+            }
+
+            for (int k = 0; k < n; k++)
+            {
+                double[,] Ak = ReplaceColumn(A, B, k);
+                double detAk = Determinant(Ak);
+
+                X[k] = detAk / detA;
+            }
+
+            return X;
+        }
+
+        public double Determinant(double[,] matrix)
+        {
+            int n = matrix.GetLength(0);
+            double det = 0;
+
+            if (n == 1)
+            {
+                return matrix[0, 0];
+            }
+            else if (n == 2)
+            {
+                return matrix[0, 0] * matrix[1, 1] - matrix[0, 1] * matrix[1, 0];
+            }
+            else
+            {
+                for (int k = 0; k < n; k++)
+                {
+                    double[,] subMatrix = new double[n - 1, n - 1];
+
+                    for (int i = 1; i < n; i++)
+                    {
+                        int jNew = 0;
+
+                        for (int j = 0; j < n; j++)
+                        {
+                            if (j == k)
+                            {
+                                continue;
+                            }
+
+                            subMatrix[i - 1, jNew] = matrix[i, j];
+                            jNew++;
+                        }
+                    }
+
+                    det += Math.Pow(-1, k) * matrix[0, k] * Determinant(subMatrix);
+                }
+            }
+
+            return det;
+        }
+
+        public double[,] ReplaceColumn(double[,] matrix, double[] column, int columnIndex)
+        {
+            int n = matrix.GetLength(0);
+            double[,] result = new double[n, n];
+
+            for (int i = 0; i < n; i++)
+            {
+                for (int j = 0; j < n; j++)
+                {
+                    if (j == columnIndex)
+                    {
+                        result[i, j] = column[i];
+                    }
+                    else
+                    {
+                        result[i, j] = matrix[i, j];
+                    }
+                }
+            }
+
+            return result;
+        }
+        public void myJordanGauss(ref double[,] a, ref double[] b, ref double[] x, int n)
+        {
+            for (int k = 0; k < n; k++)
+            {
+                double div = a[k, k];
+
+                for (int j = k; j < n; j++)
+                {
+                    a[k, j] /= div;
+                }
+
+                b[k] /= div;
+
+                for (int i = 0; i < n; i++)
+                {
+                    if (i != k)
+                    {
+                        double mult = a[i, k];
+
+                        for (int j = k; j < n; j++)
+                        {
+                            a[i, j] -= mult * a[k, j];
+                        }
+
+                        b[i] -= mult * b[k];
+                    }
+                }
+            }
+
+            for (int i = 0; i < n; i++)
+            {
+                x[i] = b[i];
+            }
+        }
+
+        private void ClearButton_Click(object sender, EventArgs e)
+        {
+            gaussCheckBox.Checked = false;
+            jordanCheckBox.Checked = false;
+            kramerCheckBox.Checked = false;
+
+            resultTextBox.Clear();
+            matrixATextBox.Clear();
+
+        }
+    }
+}
